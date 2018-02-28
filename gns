@@ -1,0 +1,26 @@
+#!/bin/bash
+#
+# GN-SEARCH
+# Simple grep of all associated notes, within tree root (this folder) only.
+# Case insensitive but other useful grep items possible -- i.e. contexts
+#
+# TODO
+# Check actual text in file names
+# Provide help screen
+
+# Bail, if no notes
+if [ ! -d .gnotes ] || (( !$# )); then exit; fi
+pushd .gnotes >/dev/null
+
+i=0
+# grep texts and prettify.
+for d in *.txt; do
+  if (( 0 < $( grep -Ehi $@ "$d" | wc --lines ) )); then
+    let i++
+    if (( $i > 1 )); then echo; fi
+    echo "==> ${d%.*} <=="
+    grep --color=auto -Ehi $@ "$d"
+  fi
+done
+
+popd >/dev/null

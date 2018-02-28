@@ -1,0 +1,3 @@
+#!/bin/bash
+# expand upon to take options or other platlists...
+youtube-dl -if mp4 -r 10K --write-description -a utpl

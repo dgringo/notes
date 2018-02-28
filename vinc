@@ -1,0 +1,78 @@
+#!/bin/bash 
+# vinc
+
+# retrieve any memory values
+mkdir -p .gnotes
+if [ -f .gnotes/memory ]; then source .gnotes/memory; fi
+
+
+
+NOP=0
+
+if [[ "$1" == "-?" ]] || [[ "$#" == "0" && ! -e "$lastvideo" ]]; then
+  cat <<EOF
+vinc [-?][-n] [filename]
+
+  If filename is ommitted, but previous a vinfo programs have successfully
+searched, that name will be offered.
+ -?	is this text.
+ -n	is for no prompts.
+
+Thus:	vinc "A Viking Saga - The Darkest Day -- 2013.mp4" is renamed to
+	"A Viking Saga - The Darkest Day -- 2013 (1).mp4" etc.
+EOF
+
+  exit 1
+elif [ "$1" == "-n" ]; then
+  NOP=1
+  shift
+fi
+
+if (( $# )); then
+  lines=$( ls -AB | grep -E ".$VINFO_EXTRE$" | grep -i "$*" | wc --lines )
+
+  if (( lines > 1 )); then
+   # Re-cap search, for user
+    ls -AB | grep -E ".$VINFO_EXTRE$" | grep -i --color=auto "$*"
+    echo
+    echo '** Not specific enough.'
+    exit 2
+  elif (( !lines )); then
+    echo '** Nothing found.'
+    exit 1
+  fi
+
+ # Found /it/.
+ # Get full source name...
+  lastvideo=$( ls -AB | grep -E ".$VINFO_EXTRE$" | grep -i "$*" )
+fi
+
+# Increment, or create, file counter suffix.
+ticker=$( sed <<<"$lastvideo" -rn 's/^.+ \(([0-9]+)\)\.[^ ]+$/\1/p' )
+if (( ticker )); then
+  let ticker++
+  target=$( sed <<<"$lastvideo" -rn "s/(.+) \(([0-9]+)\)(\.[^ ]+)$/\1 ($ticker)\3/p" )
+else
+  target=$( sed <<<"$lastvideo" -rn "s/(.+)(\.[^ ]+)$/\1 (1)\2/p" )
+fi
+
+# Rename to target name
+echo "$lastvideo ==> $target"
+if (( !NOP )); then
+  read -n1 -p "Sure to rename this file? (y/n)? "
+  echo
+  if [[ $REPLY =~ [^yY] ]]; then
+    exit 1
+  fi
+fi
+mv "$lastvideo" "$target"
+
+
+
+# If successfull, track new last name
+if (( $? == 0 )); then
+  cat .gnotes/memory | grep -vE '^lastvideo=' >.gnotes/memory
+  echo "lastvideo='$target'" >>.gnotes/memory
+fi
+
+exit 0

@@ -1,0 +1,86 @@
+#!/bin/bash
+#
+# VMV
+# Manage text info, related to particular movie/clips.  This operation must
+# begin within the file's home folder.
+
+set -e
+set -u
+set -o pipefail
+
+# D=>D		go native ;)
+# F=>f		rename
+# F=>D		move
+
+if [ -d $1 && -d $2 ]; then exit $( mv $* ); fi
+
+function getpath() {
+ # isolate directories from any filename
+  local path="${1%/*}"
+  if [ "$1" == "$path" ]; then echo ""; else echo "$path"; fi
+}
+function getbasename() {
+ # isolate filename from any path
+  echo "${1##*/}"
+}
+
+fromPath=$( getpath $1 )
+fromName=$( getbasename $1 )
+toPath=$( getpath $2 )
+toName=$( getbasename $2 )
+
+
+
+while getopts '?h' OPTION; do
+  case "$OPTION" in
+    ?|h)
+      echo <<EOF >&2
+$(basename $0) <document|directory>
+
+It is assumed this document has an associated gnotes partner; if not, control
+is transfered straight to the normal rm (with no options either.)
+EOF
+      exit 1
+      ;;
+  esac
+done
+shift "$(($OPTIND -1))"
+
+path=$(getpath "$1")
+base=$(getbasename "$1")
+
+ISDIR='[ -d "$1" ]'
+HASPATH='[ -n "$path"  && -d "$path" ]'
+HASGNOTES='[ $HASPATH && -d "$path/.gnotes" ] || [ -d ".gnotes" ]'
+
+
+# if deleting an entire subdir, pass straight on to rm.
+if [ ISDIR ]; then
+  if [ HASGNOTES ]; then
+    echo "Sure to remove this directory tree -- you backed up or saved any notes"
+    read -n1 -p "you wish to keep? (y/n)? "
+    echo
+    if [[ $REPLY =~ [^yY] ]]; then
+      exit 1
+    fi
+  fi
+
+  echo rm -d "$1"
+  exit $?
+fi
+
+# if dealing with particular document...
+[ HASPATH ] && pushd "$path"
+if [ HASGNOTES ]; then
+  txt = ".gnotes/${base%/*}.txt"
+  if [ -f "$txt" ]; then
+    echo rm "$1" "$txt"
+    exit $?
+  fi
+else
+  echo rm "$1"
+  exit $?
+fi
+[ HASPATH ] && popd
+
+exit 0

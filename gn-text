@@ -1,0 +1,142 @@
+#!/bin/bash 
+#
+# GN-TEXT
+#
+# TODO:
+# Add .description from youtube-dl, as an option
+# Bug; having an apostrophe in the filenames ('memory'), does cause error messages
+# Intelligently add '...' repression to simple listing.
+# Enable listing of existing notes files.
+
+# retrieve any memory values
+mkdir -p .gnotes
+if [ -f .gnotes/memory ]; then source .gnotes/memory; fi
+if [ "$lastvideo" ] && [ ! -f "$lastvideo" ]; then
+  echo '** gn-text error; $lastvideo (for this pwd) seems to have, unexpectedly, disappeared.'
+  $lastvideo="";
+fi
+
+
+
+if [[ "$1" == "-?" || "$#" == "0" && "$lastvideo" == "" ]]; then
+  cat <<EOF
+gn-text [-?] | [-vledf] [filename]
+
+  General Notes; associated with file, or containing folder.  Tracking user
+thoughts, opinions and detail, or even copied information from a more official
+source.  filename is local, as all information is kept under host folder.
+
+  If filename is omitted, but previous, related programs have successfully
+searched, that name will be offered.
+ -?	is this text.
+ -d|-f	notes associated with containing folder -- say, of a related series
+        of videos.
+ -v|-l	view ALL assoc. text.
+ -e	edit w/ $EDITOR (usually console based.)
+
+By default, further below is the abbreviated output you might expect.
+
+Lastly, the presence of any text is directly related to an actual assoc. file, 
+being present under .gnotes -- .gnotes I have decided to allow to stay, or to be
+deleted through more drastic efforts, such as the user rm'ng the parent or tree
+above (need to keep memory file 'till then!)
+
+e.g.:
+==> A Viking Saga - The Darkest Day -- 2013 (1).mp4 <==
+
+  A somewhat lame effort at showing the trials and tribulations related to a
+simple Norseman...
+EOF
+  exit 1
+fi
+
+view=
+edit=
+notesfile=
+
+if [[ "$1" =~ -.+ ]]; then
+ # scan all option selected
+  for c in $( sed <<<"${1:1}" -r "s/(.)/\1 /g" ); do
+    case $c in
+    d|f)
+      notesfile="pwd";;
+    v|l)
+      view=1;;
+    e)
+      edit=1;;
+    esac
+  done
+  shift
+fi
+
+if [ "$notesfile" == "pwd" ]; then
+ # this, slightly less apt., keeps the code cleaner (for now.)
+  notesfile=".gnotes/${PWD##*/}.txt"
+
+else
+
+  # If specifying refinement...
+  if (( $# )); then
+   # again, we really just want one file...
+    lines=$( ls -AB | grep -E ".$VINFO_EXTRE$" | grep -i "$*" | wc --lines )
+
+    if (( lines > 1 )); then
+     # Re-cap search, for user
+      ls -AB | grep -E ".$VINFO_EXTRE$" | grep -i --color=auto "$*"
+      echo
+      echo '** Not specific enough.'
+      exit 2
+    elif (( !lines )); then
+      echo '** Nothing found.'
+      exit 1
+    fi
+
+   # Found /it/.
+   # Get full source name...
+    lastvideo=$( ls -AB | grep -E ".$VINFO_EXTRE$" | grep -i "$*" )
+  elif [[ "$lastvideo" == "" ]]; then
+   # This error, again, should never occur.
+    echo '** Huh?'
+    exit 2
+  else
+   # Double check ;)
+    lastvideo=$( ls -AB "$lastvideo" )
+  fi
+
+  # Get basename for text... removing any usage counts
+  notesfile='.gnotes/'$( sed <<<"${lastvideo%.*}" -r "s/( \([0-9]+\))?$/.txt/g" )
+fi
+
+if [[ $edit || -e "$notesfile" ]]; then
+  if [[ $edit ]]; then 
+    $EDITOR "$notesfile";
+
+    if [ -s "$notesfile" ]; then
+     # Perfect, cheap, way of determining if a file ends with a linefeed
+      if [ -f "$notesfile" ] && (( 0 == $( tail -n1 "$notesfile" | wc --lines ) )); then
+       # No, end correctly
+        echo >>"$notesfile"
+      fi
+    else
+     # user has removed it -- or at least emptied it
+      rm "$notesfile"
+    fi
+  else
+    echo "==> $notesfile <=="
+    if [[ $view ]]; then
+     # Word wrapping: fold, fmt, wrap.
+      fmt -u "$notesfile"
+    else
+      fmt -u "$notesfile" | head -n1
+      echo "...";
+    fi
+  fi
+fi
+
+
+
+# Track new last name
+cat .gnotes/memory | grep -vE '^lastvideo=' >.gnotes/memory
+echo "lastvideo='$lastvideo'" >>.gnotes/memory
+
+exit 0

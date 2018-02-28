@@ -1,0 +1,10 @@
+#!/bin/bash
+# Show any unwatched files (movies really) without a trailing bracketed viewage count.
+#   e.g. "<filmname>.mp4"
+
+if (( $# )); then
+  echo 'No args allowed.'
+  exit 1
+fi
+
+ls -AB | grep -Ev '\.(part|bak|~)$' | grep -Ev '\([0-9]+\)\.[^ ]+$' | grep -Ei "\.$VINFO_EXTRE$" | tee .gnotes/re

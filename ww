@@ -1,0 +1,10 @@
+#!/bin/bash
+# Show any files (movies really) with a bracketed viewage count.
+#   e.g. "<filmname> (2).mp4"
+
+if (( $# )); then
+  echo 'No args allowed.'
+  exit 1
+fi
+
+ls -AB | grep -Ev '\.(part|bak|~)$' | grep -Ei " \([0-9]+\)\.$VINFO_EXTRE$" | tee .gnotes/re | grep -Ei --color=auto " \([0-9]+\)\.$VINFO_EXTRE$"

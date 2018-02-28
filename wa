@@ -1,0 +1,10 @@
+#!/bin/bash
+# Show any files (movies really).
+#   e.g. "<filmname>.mp4"
+
+if (( $# )); then
+  echo 'No args allowed.'
+  exit 1
+fi
+#!/bin/bash
+ls -AB | grep -Ev '\.(part|bak|~)$' | grep -Ei "\.$VINFO_EXTRE$" | tee ~/.vinfo/re
